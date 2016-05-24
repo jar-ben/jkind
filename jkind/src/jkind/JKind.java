@@ -1,5 +1,7 @@
 package jkind;
 
+import java.io.FileOutputStream;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,9 +32,27 @@ public class JKind {
 
 			Node main = Translate.translate(program);
 			main = setSupport(main, getAllAssigned(main));
+			//int initialNumEq = main.equations.size();
 			Specification userSpec = new Specification(main);
 			Specification analysisSpec = getAnalysisSpec(userSpec, settings);
-
+			
+			/**
+			 * these comments are related to calculating number of equations in the models
+			**/
+			/*  String xmlFilename = settings.filename + "_NUMEQ.xml";
+			    try (PrintWriter out = new PrintWriter(new FileOutputStream(xmlFilename))) {
+				out.println("<?xml version=\"1.0\"?>");
+				out.println("<Results xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">"); 
+				out.println("    <InitialNumberOfEqs>" + initialNumEq + "</InitialNumberOfEqs>");
+				out.println("    <SlicedNumberOfEqs>" + userSpec.node.equations.size() + "</SlicedNumberOfEqs>");
+				out.println("</Results>");
+			
+			} catch (Throwable t) {
+			t.printStackTrace();
+			System.exit(ExitCodes.UNCAUGHT_EXCEPTION);
+			}
+			System.exit(0);
+			*/
 			new Director(settings, userSpec, analysisSpec).run();
 			System.exit(0); // Kills all threads
 		} catch (Throwable t) {
