@@ -267,9 +267,13 @@ public class Util {
 	}
 
 	public static String spaces(int n) {
+		return makeString(' ', n);
+	}
+
+	public static String makeString(char c, int n) {
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < n; i++) {
-			sb.append(' ');
+			sb.append(c);
 		}
 		return sb.toString();
 	}
