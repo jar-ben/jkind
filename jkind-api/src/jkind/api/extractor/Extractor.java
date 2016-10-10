@@ -15,7 +15,6 @@ import jkind.lustre.parsing.LustreLexer;
 import jkind.lustre.parsing.LustreParser;
 import jkind.lustre.parsing.LustreParser.ProgramContext;
 import jkind.results.ValidProperty;
-import jkind.util.Util;
 
 import org.antlr.v4.runtime.ANTLRFileStream;
 import org.antlr.v4.runtime.CharStream;
@@ -56,13 +55,16 @@ public class Extractor {
 
 	private static void reportResults(String filename, Program program, JKindResult result)
 			throws Exception {
+		System.out.println("<html>");
+		printHeader();
+		System.out.println("<body>");
+
 		for (PropertyResult pr : result.getPropertyResults()) {
 			if (!(pr.getProperty() instanceof ValidProperty)) {
-				System.out.println("Property [" + pr.getProperty().getName() + "] is not valid");
+				System.out.println("<p class='not-valid'>Property " + pr.getProperty().getName()
+						+ " is invalid/unknown</p>");
 			}
 		}
-		System.out.println();
-		System.out.println();
 
 		for (PropertyResult pr : result.getPropertyResults()) {
 			if (pr.getProperty() instanceof ValidProperty) {
@@ -71,16 +73,48 @@ public class Extractor {
 				unused.removeAll(vp.getIvc());
 				List<Span> spans = convertToSpans(unused);
 
-				String header = "Annotations for [" + vp.getName() + "]";
-				System.out.println(Util.makeString('=', header.length()));
-				System.out.println(header);
-				System.out.println(Util.makeString('=', header.length()));
+				int total = program.getMainNode().ivc.size();
+				int covered = total - spans.size();
+				System.out.printf("<div class='valid'><h3>%s - coverage %d of %d = %.1f%%</h3>",
+						vp.getName(), covered, total, 100.0 * covered / total);
 				System.out.println();
 				displaySpans(filename, spans);
-				System.out.println();
-				System.out.println();
+				System.out.println("</div>");
 			}
 		}
+
+		System.out.println("</body>");
+		System.out.println("</html>");
+	}
+
+	private static void printHeader() {
+		System.out.println("<head>");
+		System.out.println("<style>");
+		System.out.println(".not-valid {");
+		System.out.println("  font-family: monospace;");
+		System.out.println("  background-color: lightcoral;");
+		System.out.println("  margin: 5px;");
+		System.out.println("  padding: 5px;");
+		System.out.println("}");
+		System.out.println("");
+		System.out.println(".valid {");
+		System.out.println("  font-family: monospace;");
+		System.out.println("  margin: 20px 5px 5px 5px;");
+		System.out.println("  padding: 5px;");
+		System.out.println("}");
+		System.out.println("");
+		System.out.println(".lustre {");
+		System.out.println("  font-family: monospace;");
+		System.out.println("  background-color: linen;");
+		System.out.println("  margin: 5px 5px 30px 5px;");
+		System.out.println("  padding: 5px;");
+		System.out.println("}");
+		System.out.println("");
+		System.out.println(".lustre .unused {");
+		System.out.println("  color: #B3B3B3;");
+		System.out.println("}");
+		System.out.println("</style>");
+		System.out.println("</head>");
 	}
 
 	private static List<Span> convertToSpans(List<String> names) {
@@ -100,24 +134,30 @@ public class Extractor {
 	}
 
 	private static void displaySpans(String filename, List<Span> spans) throws Exception {
-		StringBuilder annotation = new StringBuilder();
 		int i = 0;
-		int c;
-		
+
+		System.out.println("<div class='lustre'>");
 		try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+			int c;
 			while ((c = reader.read()) != -1) {
-				System.out.print((char) c);
-				annotation.append(contains(spans, i) ? "^" : " ");
+				String prefix = "";
+				String suffix = "";
+				if (contains(spans, i)) {
+					prefix = "<span class='unused'>";
+					suffix = "</span>";
+				}
+				String middle = String.valueOf((char) c);
+				if (c == ' ') {
+					middle = "&nbsp;";
+				}
+				System.out.print(prefix + middle + suffix);
 				if (c == '\n') {
-					String line = annotation.toString();
-					if (line.contains("^")) {
-						System.out.println(line);
-					}
-					annotation = new StringBuilder();
+					System.out.println("<br>");
 				}
 				i++;
 			}
 		}
+		System.out.println("</div>");
 	}
 
 	private static boolean contains(List<Span> spans, int i) {
