@@ -18,6 +18,7 @@ import jkind.lustre.Expr;
 import jkind.lustre.IdExpr;
 import jkind.lustre.IfThenElseExpr;
 import jkind.lustre.IntExpr;
+import jkind.lustre.Location;
 import jkind.lustre.Node;
 import jkind.lustre.NodeCallExpr;
 import jkind.lustre.RealExpr;
@@ -64,13 +65,13 @@ public class ExtractorVisitor extends TypeAwareAstMapVisitor {
 		return builder.build();
 	}
 
-	private Expr makeVar(Expr e) {
-		if (!(e.location instanceof ELocation)) {
+	private Expr makeVar(Location location, Expr e) {
+		if (!(location instanceof ELocation)) {
 			throw new IllegalArgumentException("Unknown location for: " + e);
 		}
 
 		String name = PREFIX + extractedCounter++;
-		locationMap.put(name, (ELocation) e.location);
+		locationMap.put(name, (ELocation) location);
 		IdExpr var = new IdExpr(name);
 		VarDecl varDecl = new VarDecl(name, getType(e));
 		typeReconstructor.addVariable(varDecl);
@@ -80,6 +81,10 @@ public class ExtractorVisitor extends TypeAwareAstMapVisitor {
 		return var;
 	}
 
+	private Expr makeVar(Expr e) {
+		return makeVar(e.location, e);
+	}
+	
 	@Override
 	public Expr visit(ArrayAccessExpr e) {
 		return makeVar(super.visit(e));
@@ -133,7 +138,7 @@ public class ExtractorVisitor extends TypeAwareAstMapVisitor {
 	@Override
 	public Expr visit(CondactExpr e) {
 		if (e.clock instanceof BoolExpr && ((BoolExpr) e.clock).value) {
-			return makeVar(e.call);
+			return makeVar(e.location, e.call);
 		} else {
 			return unsupported(e);
 		}
