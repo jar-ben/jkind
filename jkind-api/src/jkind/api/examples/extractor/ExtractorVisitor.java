@@ -1,4 +1,4 @@
-package jkind.api.extractor;
+package jkind.api.examples.extractor;
 
 import java.util.ArrayList;
 import java.util.HashMap;

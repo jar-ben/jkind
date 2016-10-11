@@ -1,4 +1,4 @@
-package jkind.api.extractor;
+package jkind.api.examples.extractor;
 
 import static java.util.stream.Collectors.toList;
 
@@ -31,7 +31,7 @@ import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.eclipse.core.runtime.NullProgressMonitor;
 
-public class Extractor {
+public class Main {
 	public static void main(String[] args) throws Exception {
 		if (args.length != 1) {
 			System.err.println("Usage: extractor <filename.lus>");
@@ -41,7 +41,7 @@ public class Extractor {
 		Program program = parseLustre(new ANTLRFileStream(filename));
 		ExtractorVisitor visitor = new ExtractorVisitor();
 		program = visitor.visit(program);
-		Util.writeToFile(program.toString(), new File(filename + ".extracted.lus"));
+		Util.writeToFile(program.toString(), new File(filename + ".extracted"));
 		JKindResult result = runJKind(program);
 		reportResults(filename, program, visitor.getLocationMap(), result);
 	}
@@ -128,8 +128,8 @@ public class Extractor {
 	}
 
 	private static void writeHeader(BufferedWriter writer) throws IOException {
-		String filename = "/jkind/api/extractor/header.html";
-		try (InputStream stream = Extractor.class.getResourceAsStream(filename)) {
+		String filename = "/jkind/api/examples/extractor/header.html";
+		try (InputStream stream = Main.class.getResourceAsStream(filename)) {
 			int c;
 			while ((c = stream.read()) != -1) {
 				writer.write((char) c);
