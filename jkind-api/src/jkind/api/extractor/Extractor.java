@@ -1,11 +1,18 @@
 package jkind.api.extractor;
 
+import static java.util.stream.Collectors.toList;
+
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Map;
+import java.util.Set;
 
 import jkind.api.JKindApi;
 import jkind.api.results.JKindResult;
@@ -23,126 +30,119 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 
 public class Extractor {
 	public static void main(String[] args) throws Exception {
-		String filename = args[0];
-
-		Program program = parseLustre(new ANTLRFileStream(filename));
-		if (program.nodes.size() > 1) {
-			System.err.println("Only single node supported");
+		if (args.length != 1) {
+			System.err.println("Usage: extractor <filename.lus>");
 			System.exit(-1);
 		}
-
-		program = ExtractorVisitor.extract(program);
-		JKindResult result = new JKindResult("results");
-		JKindApi api = new JKindApi();
-		api.setIvcReduction();
-		api.execute(program, result, new NullProgressMonitor());
-
-		reportResults(filename, program, result);
+		String filename = args[0];
+		Program program = parseLustre(new ANTLRFileStream(filename));
+		ExtractorVisitor visitor = new ExtractorVisitor();
+		program = visitor.visit(program);
+		JKindResult result = runJKind(program);
+		reportResults(filename, program, visitor.getLocationMap(), result);
 	}
 
-	public static Program parseLustre(CharStream stream) throws Exception {
+	private static Program parseLustre(CharStream stream) throws Exception {
 		LustreLexer lexer = new LustreLexer(stream);
 		CommonTokenStream tokens = new CommonTokenStream(lexer);
 		LustreParser parser = new LustreParser(tokens);
 		ProgramContext program = parser.program();
-
 		if (parser.getNumberOfSyntaxErrors() > 0) {
 			System.exit(-1);
 		}
-
-		return new ExtendedLustreToAstVisitor().program(program);
+		return new LustreToEAstVisitor().program(program);
 	}
 
-	private static void reportResults(String filename, Program program, JKindResult result)
-			throws Exception {
-		System.out.println("<html>");
-		printHeader();
-		System.out.println("<body>");
+	private static JKindResult runJKind(Program program) {
+		JKindResult result = new JKindResult("results");
+		JKindApi api = new JKindApi();
+		api.setIvcReduction();
+		api.execute(program, result, new NullProgressMonitor());
+		return result;
+	}
 
-		for (PropertyResult pr : result.getPropertyResults()) {
-			if (!(pr.getProperty() instanceof ValidProperty)) {
-				System.out.println("<p class='not-valid'>Property " + pr.getProperty().getName()
-						+ " is invalid/unknown</p>");
+	private static void reportResults(String filename, Program program,
+			Map<String, ELocation> locationMap, JKindResult result) throws Exception {
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename + ".html"))) {
+			writer.write("<html>\n");
+			writeHeader(writer);
+			writer.write("<body>\n");
+
+			for (PropertyResult pr : result.getPropertyResults()) {
+				if (!(pr.getProperty() instanceof ValidProperty)) {
+					writer.write("<p class='not-valid'>" + pr.getProperty().getName()
+							+ " is invalid/unknown</p>\n");
+				}
 			}
+
+			for (PropertyResult pr : result.getPropertyResults()) {
+				if (pr.getProperty() instanceof ValidProperty) {
+					ValidProperty vp = (ValidProperty) pr.getProperty();
+					List<String> allIvcs = getAllIvcs(program);
+
+					List<ELocation> locations = getUnusedLocations(locationMap, allIvcs,
+							vp.getIvc());
+
+					int total = allIvcs.size();
+					int covered = total - locations.size();
+					String stats = String.format("%s: %.1f%% (%d of %d covered)", vp.getName(),
+							100.0 * covered / total, covered, total);
+					writer.write("<div class='valid'>\n");
+					writer.write("<div class='stats'>" + stats + "</div>\n");
+					displayLocations(writer, filename, locations);
+					writer.write("</div>\n");
+				}
+			}
+
+			writer.write("</body>\n");
+			writer.write("</html>\n");
+		}
+	}
+
+	private static List<ELocation> getUnusedLocations(Map<String, ELocation> locationMap,
+			List<String> allIvcs, Set<String> usedIvcs) {
+		Set<String> baseUsedIvcs = new HashSet<>();
+		for (String ivc : usedIvcs) {
+			if (ivc.contains(".")) {
+				ivc = ivc.substring(ivc.lastIndexOf(".") + 1);
+			}
+			baseUsedIvcs.add(ivc);
 		}
 
-		for (PropertyResult pr : result.getPropertyResults()) {
-			if (pr.getProperty() instanceof ValidProperty) {
-				ValidProperty vp = (ValidProperty) pr.getProperty();
-				List<String> unused = new ArrayList<>(program.getMainNode().ivc);
-				unused.removeAll(vp.getIvc());
-				List<Span> spans = convertToSpans(unused);
-
-				int total = program.getMainNode().ivc.size();
-				int covered = total - spans.size();
-				System.out.printf("<div class='valid'><h3>%s - coverage %d of %d = %.1f%%</h3>",
-						vp.getName(), covered, total, 100.0 * covered / total);
-				System.out.println();
-				displaySpans(filename, spans);
-				System.out.println("</div>");
-			}
-		}
-
-		System.out.println("</body>");
-		System.out.println("</html>");
-	}
-
-	private static void printHeader() {
-		System.out.println("<head>");
-		System.out.println("<style>");
-		System.out.println(".not-valid {");
-		System.out.println("  font-family: monospace;");
-		System.out.println("  background-color: lightcoral;");
-		System.out.println("  margin: 5px;");
-		System.out.println("  padding: 5px;");
-		System.out.println("}");
-		System.out.println("");
-		System.out.println(".valid {");
-		System.out.println("  font-family: monospace;");
-		System.out.println("  margin: 20px 5px 5px 5px;");
-		System.out.println("  padding: 5px;");
-		System.out.println("}");
-		System.out.println("");
-		System.out.println(".lustre {");
-		System.out.println("  font-family: monospace;");
-		System.out.println("  background-color: linen;");
-		System.out.println("  margin: 5px 5px 30px 5px;");
-		System.out.println("  padding: 5px;");
-		System.out.println("}");
-		System.out.println("");
-		System.out.println(".lustre .unused {");
-		System.out.println("  color: #B3B3B3;");
-		System.out.println("}");
-		System.out.println("</style>");
-		System.out.println("</head>");
-	}
-
-	private static List<Span> convertToSpans(List<String> names) {
-		Pattern pattern = Pattern.compile(ExtractorVisitor.PREFIX + "_(\\d+)_(\\d+)");
-		List<Span> result = new ArrayList<>();
-		for (String name : names) {
-			Matcher matcher = pattern.matcher(name);
-			if (matcher.matches()) {
-				int start = Integer.parseInt(matcher.group(1));
-				int stop = Integer.parseInt(matcher.group(2));
-				result.add(new Span(start, stop));
-			} else {
-				throw new IllegalArgumentException("Unknown variable: " + name);
+		List<ELocation> result = new ArrayList<>();
+		for (String ivc : allIvcs) {
+			if (!baseUsedIvcs.contains(ivc)) {
+				result.add(locationMap.get(ivc));
 			}
 		}
 		return result;
 	}
 
-	private static void displaySpans(String filename, List<Span> spans) throws Exception {
+	private static List<String> getAllIvcs(Program program) {
+		return program.nodes.stream().flatMap(n -> n.ivc.stream()).collect(toList());
+	}
+
+	private static void writeHeader(BufferedWriter writer) throws IOException {
+		String filename = "/jkind/api/extractor/header.html";
+		try (InputStream stream = Extractor.class.getResourceAsStream(filename)) {
+			int c;
+			while ((c = stream.read()) != -1) {
+				writer.write((char) c);
+			}
+		}
+	}
+
+	private static void displayLocations(BufferedWriter writer, String filename,
+			List<ELocation> locations) throws Exception {
 		int i = 0;
 
-		System.out.println("<div class='lustre'>");
+		writer.write("<div class='lustre'>\n");
 		try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
 			int c;
 			while ((c = reader.read()) != -1) {
 				String prefix = "";
 				String suffix = "";
-				if (contains(spans, i)) {
+				if (contains(locations, i)) {
 					prefix = "<span class='unused'>";
 					suffix = "</span>";
 				}
@@ -150,22 +150,17 @@ public class Extractor {
 				if (c == ' ') {
 					middle = "&nbsp;";
 				}
-				System.out.print(prefix + middle + suffix);
+				writer.write(prefix + middle + suffix);
 				if (c == '\n') {
-					System.out.println("<br>");
+					writer.write("<br>\n");
 				}
 				i++;
 			}
 		}
-		System.out.println("</div>");
+		writer.write("</div>\n");
 	}
 
-	private static boolean contains(List<Span> spans, int i) {
-		for (Span span : spans) {
-			if (span.contains(i)) {
-				return true;
-			}
-		}
-		return false;
+	private static boolean contains(List<ELocation> locations, int i) {
+		return locations.stream().anyMatch(loc -> loc.start <= i && i <= loc.stop);
 	}
 }
