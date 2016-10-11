@@ -147,25 +147,18 @@ public class Main {
 			List<ELocation> locations) throws Exception {
 		int i = 0;
 
-		writer.write("<div class='lustre'>\n");
+		writer.write("<div class='lustre'>");
 		try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
 			int c;
+			boolean in_span = false;
 			while ((c = reader.read()) != -1) {
-				String prefix = "";
-				String suffix = "";
-				if (contains(locations, i)) {
-					prefix = "<span class='unused'>";
-					suffix = "</span>";
-				}
+				boolean need_span = contains(locations, i);
+				String prefix = !in_span && need_span ? "<span class='unused'>" : "";
+				String suffix = in_span && !need_span ? "</span>" : "";
 				String middle = String.valueOf((char) c);
-				if (c == ' ') {
-					middle = "&nbsp;";
-				}
 				writer.write(prefix + middle + suffix);
-				if (c == '\n') {
-					writer.write("<br>\n");
-				}
 				i++;
+				in_span = need_span;
 			}
 		}
 		writer.write("</div>\n");
