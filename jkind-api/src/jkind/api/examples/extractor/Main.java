@@ -14,6 +14,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import jkind.SolverOption;
 import jkind.api.JKindApi;
@@ -107,11 +109,15 @@ public class Main {
 	private static List<ELocation> getUnusedLocations(Map<String, ELocation> locationMap,
 			List<String> allIvcs, Set<String> usedIvcs) {
 		Set<String> baseUsedIvcs = new HashSet<>();
+		Pattern pattern = Pattern.compile(".*(" + ExtractorVisitor.PREFIX + "\\d+).*");
 		for (String ivc : usedIvcs) {
-			if (ivc.contains(".")) {
-				ivc = ivc.substring(ivc.lastIndexOf(".") + 1);
+			Matcher matcher = pattern.matcher(ivc);
+			if (!matcher.matches()) {
+				System.err.println("Unknown IVC: " + ivc);
+				System.exit(-1);
 			}
-			baseUsedIvcs.add(ivc);
+			
+			baseUsedIvcs.add(matcher.group(1));
 		}
 
 		List<ELocation> result = new ArrayList<>();

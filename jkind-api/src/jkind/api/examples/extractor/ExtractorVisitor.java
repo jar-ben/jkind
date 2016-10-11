@@ -81,6 +81,21 @@ public class ExtractorVisitor extends TypeAwareAstMapVisitor {
 	}
 
 	@Override
+	public Expr visit(ArrayAccessExpr e) {
+		return makeVar(super.visit(e));
+	}
+
+	@Override
+	public Expr visit(ArrayExpr e) {
+		return makeVar(super.visit(e));
+	}
+
+	@Override
+	public Expr visit(ArrayUpdateExpr e) {
+		return makeVar(super.visit(e));
+	}
+
+	@Override
 	public Expr visit(BinaryExpr e) {
 		// Avoid creating non-linearities
 		switch (e.op) {
@@ -141,6 +156,21 @@ public class ExtractorVisitor extends TypeAwareAstMapVisitor {
 	}
 
 	@Override
+	public Expr visit(RecordAccessExpr e) {
+		return makeVar(super.visit(e));
+	}
+
+	@Override
+	public Expr visit(RecordExpr e) {
+		return makeVar(super.visit(e));
+	}
+
+	@Override
+	public Expr visit(RecordUpdateExpr e) {
+		return makeVar(super.visit(e));
+	}
+
+	@Override
 	public Expr visit(UnaryExpr e) {
 		return makeVar(super.visit(e));
 	}
@@ -148,37 +178,7 @@ public class ExtractorVisitor extends TypeAwareAstMapVisitor {
 	/** Disabled expressions due to the way IVCs interact with flattening **/
 
 	@Override
-	public Expr visit(ArrayAccessExpr e) {
-		return unsupported(e);
-	}
-
-	@Override
-	public Expr visit(ArrayExpr e) {
-		return unsupported(e);
-	}
-
-	@Override
-	public Expr visit(ArrayUpdateExpr e) {
-		return unsupported(e);
-	}
-
-	@Override
 	public Expr visit(CondactExpr e) {
-		return unsupported(e);
-	}
-
-	@Override
-	public Expr visit(RecordAccessExpr e) {
-		return unsupported(e);
-	}
-
-	@Override
-	public Expr visit(RecordExpr e) {
-		return unsupported(e);
-	}
-
-	@Override
-	public Expr visit(RecordUpdateExpr e) {
 		return unsupported(e);
 	}
 
