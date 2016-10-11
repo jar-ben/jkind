@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import jkind.SolverOption;
 import jkind.api.JKindApi;
 import jkind.api.results.JKindResult;
 import jkind.api.results.PropertyResult;
@@ -60,6 +61,7 @@ public class Extractor {
 		JKindResult result = new JKindResult("results");
 		JKindApi api = new JKindApi();
 		api.setIvcReduction();
+		api.setSolver(SolverOption.Z3);
 		api.execute(program, result, new NullProgressMonitor());
 		return result;
 	}
