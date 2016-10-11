@@ -131,6 +131,15 @@ public class ExtractorVisitor extends TypeAwareAstMapVisitor {
 	}
 
 	@Override
+	public Expr visit(CondactExpr e) {
+		if (e.clock instanceof BoolExpr && ((BoolExpr) e.clock).value) {
+			return makeVar(e.call);
+		} else {
+			return unsupported(e);
+		}
+	}
+
+	@Override
 	public Expr visit(IdExpr e) {
 		return makeVar(super.visit(e));
 	}
@@ -176,11 +185,6 @@ public class ExtractorVisitor extends TypeAwareAstMapVisitor {
 	}
 
 	/** Disabled expressions due to the way IVCs interact with flattening **/
-
-	@Override
-	public Expr visit(CondactExpr e) {
-		return unsupported(e);
-	}
 
 	@Override
 	public Expr visit(TupleExpr e) {
