@@ -4,6 +4,7 @@ import static java.util.stream.Collectors.toList;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -22,6 +23,7 @@ import jkind.lustre.parsing.LustreLexer;
 import jkind.lustre.parsing.LustreParser;
 import jkind.lustre.parsing.LustreParser.ProgramContext;
 import jkind.results.ValidProperty;
+import jkind.util.Util;
 
 import org.antlr.v4.runtime.ANTLRFileStream;
 import org.antlr.v4.runtime.CharStream;
@@ -38,6 +40,7 @@ public class Extractor {
 		Program program = parseLustre(new ANTLRFileStream(filename));
 		ExtractorVisitor visitor = new ExtractorVisitor();
 		program = visitor.visit(program);
+		Util.writeToFile(program.toString(), new File(filename + ".extracted.lus"));
 		JKindResult result = runJKind(program);
 		reportResults(filename, program, visitor.getLocationMap(), result);
 	}

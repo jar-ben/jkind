@@ -82,7 +82,27 @@ public class ExtractorVisitor extends TypeAwareAstMapVisitor {
 
 	@Override
 	public Expr visit(BinaryExpr e) {
-		return makeVar(super.visit(e));
+		// Avoid creating non-linearities
+		switch (e.op) {
+		case MULTIPLY:
+			if (e.left instanceof RealExpr || e.left instanceof IntExpr) {
+				return makeVar(new BinaryExpr(e.location, e.left, e.op, e.right.accept(this)));
+			} else if (e.right instanceof RealExpr || e.right instanceof IntExpr) {
+				return makeVar(new BinaryExpr(e.location, e.left.accept(this), e.op, e.right));
+			} else {
+				System.err.println("Unable to handle expression: " + e);
+				System.exit(-1);
+				return null;
+			}
+
+		case DIVIDE:
+		case INT_DIVIDE:
+		case MODULUS:
+			return makeVar(new BinaryExpr(e.location, e.left.accept(this), e.op, e.right));
+
+		default:
+			return makeVar(super.visit(e));
+		}
 	}
 
 	@Override
