@@ -31,6 +31,7 @@ import jkind.lustre.UnaryExpr;
 import jkind.lustre.VarDecl;
 import jkind.lustre.builders.NodeBuilder;
 import jkind.lustre.visitors.TypeAwareAstMapVisitor;
+import jkind.lustre.visitors.TypeReconstructor;
 
 public class ExtractorVisitor extends TypeAwareAstMapVisitor {
 	public final static String PREFIX = "__extracted__";
@@ -40,6 +41,10 @@ public class ExtractorVisitor extends TypeAwareAstMapVisitor {
 	private final List<VarDecl> newLocals = new ArrayList<>();
 	private final List<Equation> newEquations = new ArrayList<>();
 	private final List<String> newIvc = new ArrayList<>();
+
+	public ExtractorVisitor() {
+		super(TypeReconstructor.NO_INT_ENCODING);
+	}
 
 	public Map<String, ELocation> getLocationMap() {
 		return locationMap;
@@ -84,7 +89,7 @@ public class ExtractorVisitor extends TypeAwareAstMapVisitor {
 	private Expr makeVar(Expr e) {
 		return makeVar(e.location, e);
 	}
-	
+
 	@Override
 	public Expr visit(ArrayAccessExpr e) {
 		return makeVar(super.visit(e));

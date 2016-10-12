@@ -63,7 +63,7 @@ public class RemoveCondacts {
 	private RemoveCondacts(Program program) {
 		this.program = program;
 		this.nodeTable = Util.getNodeTable(program.nodes);
-		this.typeReconstructor = new TypeReconstructor(program);
+		this.typeReconstructor = new TypeReconstructor(program, TypeReconstructor.INT_ENCODING);
 	}
 
 	private void remove() {

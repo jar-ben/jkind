@@ -49,19 +49,25 @@ public class TypeReconstructor implements ExprVisitor<Type> {
 	private final Map<String, EnumType> enumValueTable = new HashMap<>();
 	private final Map<String, Type> variableTable = new HashMap<>();
 	private final Map<String, Node> nodeTable = new HashMap<>();
+	private final boolean intEncoding;
 
-	public TypeReconstructor(Program program) {
+	public static final boolean INT_ENCODING = true;
+	public static final boolean NO_INT_ENCODING = false;
+	
+	public TypeReconstructor(Program program, boolean intEncoding) {
 		populateTypeTable(program.types);
 		populateEnumValueTable(program.types);
 		populateConstantTable(program.constants);
 		nodeTable.putAll(Util.getNodeTable(program.nodes));
+		this.intEncoding = intEncoding;
 	}
 
 	/**
 	 * This constructor is for use after enumerated values, user types,
 	 * constants, and nodes have all been inlined.
 	 */
-	public TypeReconstructor() {
+	public TypeReconstructor(boolean intEncoding) {
+		this.intEncoding = intEncoding;
 	}
 
 	private void populateTypeTable(List<TypeDef> typeDefs) {
@@ -94,7 +100,7 @@ public class TypeReconstructor implements ExprVisitor<Type> {
 		variableTable.clear();
 		Util.getVarDecls(node).forEach(this::addVariable);
 	}
-	
+
 	public void addVariable(VarDecl varDecl) {
 		variableTable.put(varDecl.id, resolveType(varDecl.type));
 	}
@@ -174,7 +180,7 @@ public class TypeReconstructor implements ExprVisitor<Type> {
 		} else if (constantDefinitionTable.containsKey(e.id)) {
 			return constantDefinitionTable.get(e.id).accept(this);
 		} else if (enumValueTable.containsKey(e.id)) {
-			return NamedType.INT;
+			return intEncoding ? NamedType.INT : enumValueTable.get(e.id);
 		} else {
 			throw new IllegalArgumentException("Unknown variable: " + e.id);
 		}
@@ -258,12 +264,12 @@ public class TypeReconstructor implements ExprVisitor<Type> {
 		return type.accept(new TypeMapVisitor() {
 			@Override
 			public Type visit(SubrangeIntType e) {
-				return NamedType.INT;
+				return intEncoding ? NamedType.INT : e;
 			}
 
 			@Override
 			public Type visit(EnumType e) {
-				return NamedType.INT;
+				return intEncoding ? NamedType.INT : e;
 			}
 
 			@Override

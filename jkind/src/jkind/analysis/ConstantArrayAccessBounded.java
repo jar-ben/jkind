@@ -28,7 +28,7 @@ public class ConstantArrayAccessBounded extends ExprIterVisitor {
 	public boolean visitProgram(Program program) {
 		constantAnalyzer = new ConstantAnalyzer(program);
 		constantEvaluator = new ConstantEvaluator(program);
-		typeReconstructor = new TypeReconstructor(program);
+		typeReconstructor = new TypeReconstructor(program, TypeReconstructor.NO_INT_ENCODING);
 
 		for (Node node : program.nodes) {
 			visitNode(node);
