@@ -153,10 +153,13 @@ public class Main {
 			boolean in_span = false;
 			while ((c = reader.read()) != -1) {
 				boolean need_span = contains(locations, i);
-				String prefix = !in_span && need_span ? "<span class='unused'>" : "";
-				String suffix = in_span && !need_span ? "</span>" : "";
-				String middle = String.valueOf((char) c);
-				writer.write(prefix + middle + suffix);
+				String prefix = "";
+				if (!in_span && need_span) {
+					prefix = "<span class='unused'>";
+				} else if (in_span && !need_span) {
+					prefix = "</span>";
+				}
+				writer.write(prefix + (char) c);
 				i++;
 				in_span = need_span;
 			}
