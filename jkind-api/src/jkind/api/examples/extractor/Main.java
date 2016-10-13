@@ -21,6 +21,7 @@ import jkind.SolverOption;
 import jkind.api.JKindApi;
 import jkind.api.results.JKindResult;
 import jkind.api.results.PropertyResult;
+import jkind.api.results.Status;
 import jkind.lustre.Program;
 import jkind.lustre.parsing.LustreLexer;
 import jkind.lustre.parsing.LustreParser;
@@ -60,11 +61,24 @@ public class Main {
 	}
 
 	private static JKindResult runJKind(Program program) {
-		JKindResult result = new JKindResult("results");
+		JKindResult result = initialJKindResult(program);
 		JKindApi api = new JKindApi();
 		api.setIvcReduction();
 		api.setSolver(SolverOption.Z3);
 		api.execute(program, result, new NullProgressMonitor());
+		return result;
+	}
+
+	private static JKindResult initialJKindResult(Program program) {
+		JKindResult result = new JKindResult("results");
+		for (String prop : program.getMainNode().properties) {
+			PropertyResult pr = result.addProperty(prop);
+			pr.addPropertyChangeListener(evt -> {
+				if (pr.getStatus() != Status.WORKING) {
+					System.out.println(pr);
+				}
+			});
+		}
 		return result;
 	}
 
@@ -116,7 +130,7 @@ public class Main {
 				System.err.println("Unknown IVC: " + ivc);
 				System.exit(-1);
 			}
-			
+
 			baseUsedIvcs.add(matcher.group(1));
 		}
 
