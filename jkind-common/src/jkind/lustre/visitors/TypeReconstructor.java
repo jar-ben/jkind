@@ -127,7 +127,11 @@ public class TypeReconstructor implements ExprVisitor<Type> {
 		case PLUS:
 		case MINUS:
 		case MULTIPLY:
-			return e.left.accept(this);
+			if (isIntBased(e.left.accept(this))) {
+				return NamedType.INT;
+			} else {
+				return NamedType.REAL;
+			}
 
 		case DIVIDE:
 			return NamedType.REAL;
@@ -281,5 +285,9 @@ public class TypeReconstructor implements ExprVisitor<Type> {
 				}
 			}
 		});
+	}
+
+	private boolean isIntBased(Type type) {
+		return type == NamedType.INT || type instanceof SubrangeIntType;
 	}
 }

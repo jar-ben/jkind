@@ -2,8 +2,10 @@ package jkind.api.examples.extractor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import jkind.lustre.ArrayAccessExpr;
 import jkind.lustre.ArrayExpr;
@@ -25,7 +27,6 @@ import jkind.lustre.RealExpr;
 import jkind.lustre.RecordAccessExpr;
 import jkind.lustre.RecordExpr;
 import jkind.lustre.RecordUpdateExpr;
-import jkind.lustre.SubrangeIntType;
 import jkind.lustre.TupleExpr;
 import jkind.lustre.UnaryExpr;
 import jkind.lustre.VarDecl;
@@ -36,6 +37,7 @@ import jkind.lustre.visitors.TypeReconstructor;
 public class ExtractorVisitor extends TypeAwareAstMapVisitor {
 	public final static String PREFIX = "__extracted__";
 	private final Map<String, ELocation> locationMap = new HashMap<>();
+	private final Set<String> constants = new HashSet<>();
 	private int extractedCounter = 0;
 
 	private final List<VarDecl> newLocals = new ArrayList<>();
@@ -52,6 +54,7 @@ public class ExtractorVisitor extends TypeAwareAstMapVisitor {
 
 	@Override
 	public Constant visit(Constant e) {
+		constants.add(e.id);
 		return e;
 	}
 
@@ -110,9 +113,9 @@ public class ExtractorVisitor extends TypeAwareAstMapVisitor {
 		// Avoid creating non-linearities
 		switch (e.op) {
 		case MULTIPLY:
-			if (e.left instanceof RealExpr || e.left instanceof IntExpr) {
+			if (isConstant(e.left)) {
 				return makeVar(new BinaryExpr(e.location, e.left, e.op, e.right.accept(this)));
-			} else if (e.right instanceof RealExpr || e.right instanceof IntExpr) {
+			} else if (isConstant(e.right)) {
 				return makeVar(new BinaryExpr(e.location, e.left.accept(this), e.op, e.right));
 			} else {
 				System.err.println("Unable to handle expression: " + e);
@@ -128,6 +131,17 @@ public class ExtractorVisitor extends TypeAwareAstMapVisitor {
 		default:
 			return makeVar(super.visit(e));
 		}
+	}
+
+	private boolean isConstant(Expr expr) {
+		if (expr instanceof RealExpr || expr instanceof IntExpr) {
+			return true;
+		}
+		if (expr instanceof IdExpr) {
+			IdExpr idExpr = (IdExpr) expr;
+			return constants.contains(idExpr.id);
+		}
+		return false;
 	}
 
 	@Override
@@ -199,14 +213,6 @@ public class ExtractorVisitor extends TypeAwareAstMapVisitor {
 	@Override
 	public Expr visit(TupleExpr e) {
 		return unsupported(e);
-	}
-
-	@Override
-	public VarDecl visit(VarDecl e) {
-		if (e.type instanceof SubrangeIntType) {
-			unsupported(e.type);
-		}
-		return e;
 	}
 
 	private Expr unsupported(Object e) {
