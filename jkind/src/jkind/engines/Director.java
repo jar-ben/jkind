@@ -70,13 +70,10 @@ public class Director extends MessageHandler {
 	private Advice inputAdvice;
 	private AdviceWriter adviceWriter;
 
-	private MiniJKind miniJkind;
-
 	public Director(JKindSettings settings, Specification userSpec, Specification analysisSpec) {
 		this.settings = settings;
 		this.userSpec = userSpec;
-		this.analysisSpec = analysisSpec;
-		this.miniJkind = null;
+		this.analysisSpec = analysisSpec; 
 		this.writer = getWriter();
 		this.startTime = System.currentTimeMillis();
 		this.remainingProperties.addAll(analysisSpec.node.properties);
@@ -96,8 +93,7 @@ public class Director extends MessageHandler {
 	public Director(JKindSettings settings, Specification userSpec, Specification analysisSpec, MiniJKind miniJkind) {
 		this.settings = settings;
 		this.userSpec = userSpec;
-		this.analysisSpec = analysisSpec;
-		this.miniJkind = miniJkind;
+		this.analysisSpec = analysisSpec; 
 		this.writer = getWriter();
 		this.startTime = System.currentTimeMillis();
 		this.remainingProperties.addAll(analysisSpec.node.properties);
@@ -121,9 +117,7 @@ public class Director extends MessageHandler {
 			} else if (settings.xml) {
 				return new XmlWriter(settings.filename + ".xml", userSpec.typeMap,
 						settings.xmlToStdout);
-			} else if (settings.miniJkind){
-				return new ConsoleWriter(new NodeLayout(userSpec.node), miniJkind);
-			}
+			}  
 			else {
 				return new ConsoleWriter(new NodeLayout(userSpec.node));
 			}
@@ -132,10 +126,8 @@ public class Director extends MessageHandler {
 		}
 	}
 
-	public int run() {
-		if(!settings.miniJkind){
-			printHeader();
-		}
+	public int run() { 
+		printHeader(); 
 		writer.begin();
 		addShutdownHook();
 		createAndStartEngines();
@@ -344,7 +336,7 @@ public class Director extends MessageHandler {
 
 		List<Expr> invariants = settings.reduceIvc ? vm.invariants : Collections.emptyList();
 		
-		if((!settings.miniJkind) && (settings.reduceIvc)){
+		if(settings.reduceIvc){
 			Set<String> ivc = IvcUtil.trimNode(IvcUtil.findRightSide(vm.ivc, settings.allAssigned, analysisSpec.node.equations));
 			List<Tuple<Set<String>, List<String>>> allIvcs = new ArrayList<>();
 			if(settings.allIvcs){
@@ -504,7 +496,7 @@ public class Director extends MessageHandler {
 	}
 
 	private void printSummary() { 
-		if (!settings.xmlToStdout && !settings.miniJkind) {
+		if (!settings.xmlToStdout) {
 			System.out.println("    -------------------------------------");
 			System.out.println("    --^^--        SUMMARY          --^^--");
 			System.out.println("    -------------------------------------");

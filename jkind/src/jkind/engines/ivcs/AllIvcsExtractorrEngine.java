@@ -142,8 +142,7 @@ public class AllIvcsExtractorrEngine extends SolverBasedEngine {
 		js.slicing = settings.slicing;
 		js.allAssigned = settings.allAssigned;
 		js.pdrMax = settings.pdrMax;
-		js.boundedModelChecking = settings.boundedModelChecking;
-		js.miniJkind = true;
+		js.boundedModelChecking = settings.boundedModelChecking; 
 		
 		Set <String> wantedElem = IvcUtil.getIvcNames(ivcMap, new ArrayList<> (seed)); 
 		List<String> deactivate = new ArrayList<>();

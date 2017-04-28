@@ -31,8 +31,7 @@ public class MinimalIvcFinder {
 		Set<String> minimal = new HashSet<>(candidates);
 		JKindSettings js = new JKindSettings(); 
 		//js.noSlicing = true;   
-		js.allAssigned = false;
-		js.miniJkind = true; 
+		js.allAssigned = false; 
 		js.timeout = timeout; 
 		//------------ only for the experiment -------------
 		String xmlFilename = fileName + "_minimizationInfo.xml";
@@ -88,8 +87,7 @@ public class MinimalIvcFinder {
 		Set<String> must = new HashSet<>();
 		JKindSettings js = new JKindSettings(); 
 		//js.noSlicing = true;   
-		js.allAssigned = false;
-		js.miniJkind = true; 
+		js.allAssigned = false; 
 		js.timeout = timeout; 
 		//------------ only for the experiment -------------
 		String xmlFilename = fileName + "_minimizationInfo_in_mustComputation.xml";

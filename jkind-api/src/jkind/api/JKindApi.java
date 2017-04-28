@@ -26,6 +26,7 @@ public class JKindApi extends KindApi {
 	protected boolean inductiveCounterexamples = false;
 	protected boolean ivcReduction = false;
 	protected boolean allIvcs = false;
+	protected boolean slicing = false;
 	protected boolean smoothCounterexamples = false;
 	protected boolean intervalGeneralization = false;
 
@@ -147,6 +148,12 @@ public class JKindApi extends KindApi {
 	public void setWriteAdviceFile(String fileName) {
 		writeAdviceFileName = fileName;
 	}
+	
+
+	public void setSlicing(boolean slicing) {
+		this.slicing = slicing;
+		
+	}
 
 	/**
 	 * Run JKind on a Lustre program
@@ -217,6 +224,9 @@ public class JKindApi extends KindApi {
 		if (writeAdviceFileName != null) {
 			args.add("-write_advice");
 			args.add(new File(tempDir, writeAdviceFileName).getAbsolutePath());
+		}
+		if(!slicing){
+			args.add("-no_slicing");
 		}
 
 		args.add(lustreFile.toString());
