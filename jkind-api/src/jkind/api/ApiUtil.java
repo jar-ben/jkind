@@ -44,8 +44,7 @@ public class ApiUtil {
 		try {
 			xmlFile = getXmlFile(lustreFile);
 			debug.println("XML results file", xmlFile);
-			ensureDeleted(xmlFile); 
-			System.out.println(lustreFile);
+			ensureDeleted(xmlFile);  
 			callJKind(runCommand, lustreFile, xmlFile, result, monitor, debug);
 		} catch (JKindException e) {
 			throw e;
