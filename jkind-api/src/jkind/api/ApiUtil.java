@@ -44,7 +44,8 @@ public class ApiUtil {
 		try {
 			xmlFile = getXmlFile(lustreFile);
 			debug.println("XML results file", xmlFile);
-			ensureDeleted(xmlFile);
+			ensureDeleted(xmlFile); 
+			System.out.println(lustreFile);
 			callJKind(runCommand, lustreFile, xmlFile, result, monitor, debug);
 		} catch (JKindException e) {
 			throw e;
@@ -82,8 +83,9 @@ public class ApiUtil {
 				result.start();
 				process = builder.start();
 				parseThread.start();
-				String output = ApiUtil.readOutput(process, monitor);
-				result.setText(output);
+				String output = ApiUtil.readOutput(process, monitor); 
+				
+				result.setText(output); 
 				debug.println("JKind output", debug.saveFile("jkind-output-", ".txt", output));
 			} finally {
 				int code = 0;
@@ -97,8 +99,7 @@ public class ApiUtil {
 				}
 
 				xmlStream.done();
-				parseThread.join();
-
+				parseThread.join(); 
 				if (monitor.isCanceled()) {
 					result.cancel();
 				} else {

@@ -3,7 +3,12 @@ package jkind;
 
 public class JKindSettings extends Settings {
 	public int n = Integer.MAX_VALUE;
-	public int timeout = Integer.MAX_VALUE; 
+	public int timeout = Integer.MAX_VALUE;
+	/**
+	 *  The miniJkind option is to deal with naming issues in multiple nodes
+	 *  In case of multiple nodes, for all IVCs we need to keep flattened names
+	 */
+	public boolean miniJkind = false;
 	public boolean excel = false;
 	public boolean xml = false;
 	public boolean xmlToStdout = false;

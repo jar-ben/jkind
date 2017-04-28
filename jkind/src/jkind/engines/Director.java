@@ -14,6 +14,7 @@ import jkind.ExitCodes;
 import jkind.JKindException;
 import jkind.JKindSettings;
 import jkind.Main;
+import jkind.MiniJKind;
 import jkind.StdErr;
 import jkind.advice.Advice;
 import jkind.advice.AdviceReader;
@@ -336,7 +337,7 @@ public class Director extends MessageHandler {
 
 		List<Expr> invariants = settings.reduceIvc ? vm.invariants : Collections.emptyList();
 		
-		if(settings.reduceIvc){
+		if((!settings.miniJkind) && (settings.reduceIvc)){
 			Set<String> ivc = IvcUtil.trimNode(IvcUtil.findRightSide(vm.ivc, settings.allAssigned, analysisSpec.node.equations));
 			List<Tuple<Set<String>, List<String>>> allIvcs = new ArrayList<>();
 			if(settings.allIvcs){

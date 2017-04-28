@@ -36,6 +36,8 @@ public class JKindApi extends KindApi {
 	protected Map<String, String> environment = new HashMap<>();
 	protected String readAdviceFileName = null;
 	protected String writeAdviceFileName = null;
+	private boolean miniJkind = false;
+	private boolean allAssigned = false;
 
 	/**
 	 * Set the maximum depth for BMC and k-induction
@@ -154,6 +156,14 @@ public class JKindApi extends KindApi {
 		this.slicing = slicing;
 		
 	}
+	
+	public void setMiniJKind() { 
+		this.miniJkind = true;
+	}
+
+	public void setAllAssigned() {
+		this.allAssigned = true;
+	}
 
 	/**
 	 * Run JKind on a Lustre program
@@ -168,7 +178,7 @@ public class JKindApi extends KindApi {
 	 */
 	@Override
 	public void execute(File lustreFile, JKindResult result, IProgressMonitor monitor) {
-		debug.println("Lustre file", lustreFile);
+		debug.println("Lustre file", lustreFile); 
 		ApiUtil.execute(this::getJKindProcessBuilder, lustreFile, result, monitor, debug);
 	}
 
@@ -227,6 +237,12 @@ public class JKindApi extends KindApi {
 		}
 		if(!slicing){
 			args.add("-no_slicing");
+		}
+		if(miniJkind){
+			args.add("-minijkind");
+		}
+		if(allAssigned){
+			args.add("-all_assigned");
 		}
 
 		args.add(lustreFile.toString());

@@ -3,9 +3,7 @@ package jkind.writers;
 import static java.util.stream.Collectors.toList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import jkind.engines.MiniJKind; 
-import jkind.engines.messages.ValidMessage;
+import java.util.Set;  
 import jkind.lustre.Expr;
 import jkind.results.Counterexample;
 import jkind.results.layout.Layout;
@@ -13,18 +11,12 @@ import jkind.util.Tuple;
 import jkind.util.Util;
 
 public class ConsoleWriter extends Writer {
-	private final Layout layout;
-    private MiniJKind miniJkind;
+	private final Layout layout; 
 	public ConsoleWriter(Layout layout) {
 		super();
 		this.layout = layout;
 	}
-	
-	public ConsoleWriter(Layout layout, MiniJKind miniJkind) {
-		this(layout);
-		this.miniJkind = miniJkind;
-	}
-
+ 
 	@Override
 	public void begin() {
 	}

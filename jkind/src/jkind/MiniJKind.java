@@ -1,5 +1,4 @@
-package jkind.engines; 
-import jkind.JKindSettings; 
+package jkind; 
 import jkind.api.ApiUtil;
 import jkind.api.JKindApi;
 import jkind.api.results.JKindResult;
@@ -39,13 +38,8 @@ public class MiniJKind{
 			throw new IllegalArgumentException("MiniJKind Expects exactly one property");
 		}
 		
-		if (settings.allAssigned && settings.reduceIvc){ 
-			program = IvcUtil.setIvcArgs(spec.node, IvcUtil.getAllAssigned(spec.node));
-			mSettings = settings;
-		}else{
-			program = spec.node;
-			mSettings = settings;
-		} 
+		program = spec.node;
+		mSettings = settings; 
 	}
 	
 	public void verify() {
@@ -73,11 +67,15 @@ public class MiniJKind{
 		if(mSettings.reduceIvc){
 			api.setIvcReduction();
 		}
+		if (mSettings.allAssigned){
+			api.setAllAssigned();
+		} 
 		api.setN(mSettings.n);
 		api.setSolver(mSettings.solver);
 		api.setPdrMax(mSettings.pdrMax);
 		api.setTimeout(mSettings.timeout); 
 		api.setSlicing(mSettings.slicing);
+		api.setMiniJKind();
 	}
 
 	private JKindResult initialJKindResult() {

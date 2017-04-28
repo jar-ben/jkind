@@ -22,6 +22,7 @@ public class JKindArgumentParser extends ArgumentParser {
 	private static final String IVC = "ivc";
 	private static final String IVC_ALL = "all_ivcs";
 	private static final String NO_SLICING = "no_slicing"; 
+	private static final String MINIJKIND = "minijkind"; 
 	private static final String SCRATCH = "scratch";
 	private static final String SMOOTH = "smooth";
 	private static final String SOLVER = "solver";
@@ -72,6 +73,7 @@ public class JKindArgumentParser extends ArgumentParser {
 		options.addOption(XML, false, "generate results in XML format");
 		options.addOption(XML_TO_STDOUT, false, "generate results in XML format on stardard out");
 		options.addOption(JSUPPORT_USE_UNSAT_CORE, true, "make JSupport use an initial IVC as input");
+		options.addOption(MINIJKIND, false, "no external usage: it is for internal interaction with jkind-api");
 		return options;
 	}
 
@@ -147,6 +149,10 @@ public class JKindArgumentParser extends ArgumentParser {
 		if (line.hasOption(IVC_ALL)) {
 			settings.reduceIvc = true;
 			settings.allIvcs = true;
+		}
+		
+		if (line.hasOption(MINIJKIND)){
+			settings.miniJkind = true;
 		}
 		
 		if (line.hasOption(ALL_ASSIGNED)){
