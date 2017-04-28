@@ -45,8 +45,7 @@ public class MiniJKind{
 		}else{
 			program = spec.node;
 			mSettings = settings;
-		}
-		this.verify();
+		} 
 	}
 	
 	public void verify() {
