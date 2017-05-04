@@ -139,8 +139,7 @@ public class AllIvcsExtractorrEngine extends SolverBasedEngine {
 		js.timeout = TIMEOUT; 
 		// optional-- could be commented later:
 		//js.scratch = true;
-		js.slicing = settings.slicing;
-		js.allAssigned = settings.allAssigned;
+		js.slicing = settings.slicing; 
 		js.pdrMax = settings.pdrMax;
 		js.boundedModelChecking = settings.boundedModelChecking; 
 		

@@ -66,9 +66,6 @@ public class MiniJKind{
 	private void setApiOptions(JKindApi api) {
 		if(mSettings.reduceIvc){
 			api.setIvcReduction();
-		}
-		if (mSettings.allAssigned){
-			api.setAllAssigned();
 		} 
 		api.setN(mSettings.n);
 		api.setSolver(mSettings.solver);

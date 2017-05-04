@@ -36,8 +36,7 @@ public class JKindApi extends KindApi {
 	protected Map<String, String> environment = new HashMap<>();
 	protected String readAdviceFileName = null;
 	protected String writeAdviceFileName = null;
-	private boolean miniJkind = false;
-	private boolean allAssigned = false;
+	private boolean miniJkind = false; 
 
 	/**
 	 * Set the maximum depth for BMC and k-induction
@@ -161,10 +160,6 @@ public class JKindApi extends KindApi {
 		this.miniJkind = true;
 	}
 
-	public void setAllAssigned() {
-		this.allAssigned = true;
-	}
-
 	/**
 	 * Run JKind on a Lustre program
 	 * 
@@ -241,10 +236,7 @@ public class JKindApi extends KindApi {
 		if(miniJkind){
 			args.add("-minijkind");
 		}
-		if(allAssigned){
-			args.add("-all_assigned");
-		}
-
+ 
 		args.add(lustreFile.toString());
 
 		ProcessBuilder builder = new ProcessBuilder(args);

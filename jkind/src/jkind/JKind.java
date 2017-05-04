@@ -15,26 +15,32 @@ public class JKind {
 	public static final String EQUATION_NAME = "__addedEQforAsr_by_JKind__"; 
 	public static void main(String[] args) {
 		try {
+			Specification userSpec;
 			JKindSettings settings = JKindArgumentParser.parse(args);
 			Program program = Main.parseLustre(settings.filename);
-			program = setMainNode(program, settings.main);
+			
+			if(! settings.miniJkind){
+				program = setMainNode(program, settings.main);
 
-			StaticAnalyzer.check(program, settings.solver);
-			if (!LinearChecker.isLinear(program)) {
-				if (settings.pdrMax > 0) {
-					StdErr.warning("PDR not available for some properties due to non-linearities");
+				StaticAnalyzer.check(program, settings.solver);
+				if (!LinearChecker.isLinear(program)) {
+					if (settings.pdrMax > 0) {
+						StdErr.warning("PDR not available for some properties due to non-linearities");
+					}
 				}
-			}
 
-			Node main = Translate.translate(program); 
-			if(settings.allAssigned){
+				Node main = Translate.translate(program); 
+				if(settings.allAssigned){
 				
-				//main = IvcUtil.normalizeAssertions(main);
-				main = IvcUtil.setIvcArgs(main, IvcUtil.getAllAssigned(main));
-			} 
-			Specification userSpec = new Specification(main, settings.slicing); 
+					//main = IvcUtil.normalizeAssertions(main);
+					main = IvcUtil.setIvcArgs(main, IvcUtil.getAllAssigned(main));
+				} 
+				userSpec = new Specification(main, settings.slicing);  
+			}
+			else{
+				userSpec = new Specification(program.getMainNode(), false); 
+			}
 			Specification analysisSpec = getAnalysisSpec(userSpec, settings);
-
 			new Director(settings, userSpec, analysisSpec).run();
 			System.exit(0); // Kills all threads
 		} catch (Throwable t) {
