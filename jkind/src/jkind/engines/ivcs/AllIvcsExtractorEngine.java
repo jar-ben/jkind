@@ -203,8 +203,7 @@ public class AllIvcsExtractorEngine extends SolverBasedEngine {
 			}else{
 				map = new Cons("and", map, blockDownComplement(seed)); 
 			}
-			while(!shrinkingPool.isEmpty()) {
-				//System.out.printf("Shrimkimg pool size: %d%n", shrinkingPool.size());
+			while(!shrinkingPool.isEmpty()) {				
 				List<Symbol> ivc = shrinkingPool.get(0);
 				shrinkingPool.remove(0);				
 				mapShrink(ivc, property.toString());
@@ -267,8 +266,7 @@ public class AllIvcsExtractorEngine extends SolverBasedEngine {
 		dimension = ivcMap.size();
 		TIMEOUT = 30 + (int)(vm.proofTime * 5);		
 		List<Symbol> seed = new ArrayList<Symbol>(); 
-		Set<String> mustChckList = new HashSet<>(); 		
-		//List<String> inv = vm.invariants.stream().map(Object::toString).collect(toList());  
+		Set<String> mustChckList = new HashSet<>(); 				  
 		
 		seed.addAll(IvcUtil.getIvcLiterals(ivcMap, new ArrayList<>(vm.ivc)));
 		map = blockUp(seed);  
@@ -281,21 +279,16 @@ public class AllIvcsExtractorEngine extends SolverBasedEngine {
 		z3Solver.push();
 		while(checkMapSatisfiability(seed, mustChckList, false)){ //get minimal model of map	
 			double time = (System.currentTimeMillis() - runtime) / 1000.0;			
-			System.out.printf("allIvcs size: %d, iteration time: %f %n", allIvcs.size(), time);
-			//System.out.println("iteration");
+			System.out.printf("allIvcs size: %d, iteration time: %f %n", allIvcs.size(), time);			
 			if(!check(seed, property.toString())) { // if seed is not adequate
-				//System.out.println("the seed is not satisfiable (MIVC)");
 				map = new Cons("and", map, blockUp(seed)); //seed is an MIVC 
 				markMIVC(seed);				
 			} else {
-				//System.out.println("the seed is satisfiable (growing follows)");
 				GrowByElimination(seed, property.toString()); //seed is inadequate -> grow it to a (approximately) maximal inadequate subset and boost the map
 			}				
 			while(!shrinkingPool.isEmpty()) {
-				//System.out.println("Shrinking pool size: " + shrinkingPool.size());
 				List<Symbol> ivc = shrinkingPool.get(0);
 				shrinkingPool.remove(0);				
-				//System.out.println("Initial ivc size: " + ivc.size());
 				mapShrink(ivc, property.toString());
 			}						
 		} 
@@ -320,7 +313,7 @@ public class AllIvcsExtractorEngine extends SolverBasedEngine {
 		// optional-- could be commented later:
 		//js.scratch = true;
 		js.solver = settings.solver;
-		js.slicing = true; 
+		js.slicing = false; 
 		js.pdrMax = settings.pdrMax;
 		js.boundedModelChecking = settings.boundedModelChecking;
         js.miniJkind = true;
@@ -427,7 +420,7 @@ public class AllIvcsExtractorEngine extends SolverBasedEngine {
 		// optional-- could be commented later:
 		//js.scratch = true;
 		js.solver = settings.solver;
-		js.slicing = true; 
+		js.slicing = false; 
 		js.pdrMax = settings.pdrMax;
 		js.boundedModelChecking = settings.boundedModelChecking;
         js.miniJkind = true;
@@ -474,7 +467,7 @@ public class AllIvcsExtractorEngine extends SolverBasedEngine {
 		// optional-- could be commented later:
 		//js.scratch = true;
 		js.solver = settings.solver;
-		js.slicing = true; 
+		js.slicing = false; 
 		js.pdrMax = settings.pdrMax;
 		js.boundedModelChecking = settings.boundedModelChecking;
         js.miniJkind = true;
@@ -527,7 +520,6 @@ public class AllIvcsExtractorEngine extends SolverBasedEngine {
 			for(List<Symbol> s: shrinkingPool) {
 				if(s.containsAll(approx)) {
 					toRemove.add(s);
-					//System.out.println("a seed removed from shrinkingPool");
 				}				
 			}
 			shrinkingPool.removeAll(toRemove);
@@ -546,11 +538,9 @@ public class AllIvcsExtractorEngine extends SolverBasedEngine {
 			}							
 			if(!removed) //seed is a MSS
 				break;
-			//System.out.println("unsat subset found during grow");
 			resultOfIvcFinder.clear();
 		}		
 		map = new Cons("and", map, blockDownComplement(top));		
-		//System.out.println("End of grow");
 		return true;
 	}
 			
@@ -587,15 +577,13 @@ public class AllIvcsExtractorEngine extends SolverBasedEngine {
 	//JB
 	private boolean mapShrink(List<Symbol> seed, String property) {
 		shrinks++;
-		//System.out.printf("shrinking, size: %d%n", seed.size() );
 		int shrinkedBy = 0;
 		int round = 0;
 		int ex = 0;
 		int unex = 0;
 		List<Symbol> candidates = new ArrayList<Symbol>(seed);		 
 		for(Symbol c : candidates) {
-			round++;
-			//System.out.printf("s %d ", round );			
+			round++;	
 			seed.remove(c);
 			if(checkMap(seed) && !mustElements.contains(c.toString()) ) { // the mustElements part should be already encoded in map
 				unex++;				
@@ -607,7 +595,6 @@ public class AllIvcsExtractorEngine extends SolverBasedEngine {
 			}
 			if(check(seed, property)) {			
 				ArrayList<Symbol> copy = new ArrayList<Symbol>(seed);				
-				//map = new Cons("and", map, blockDown(copy)); //the blocking is performed at the end of shrinking
 				growingPool.add(copy);																
 				seed.add(c);				
 			}			
@@ -627,7 +614,7 @@ public class AllIvcsExtractorEngine extends SolverBasedEngine {
 		}
 		shrinkingPool.removeAll(toRemove);
 		
-		int maxGrows = 80;
+		int maxGrows = 2000;
 		int grows = 0;
 		while(!growingPool.isEmpty()) {			
 			List<Symbol> is = growingPool.get(0);
@@ -635,8 +622,6 @@ public class AllIvcsExtractorEngine extends SolverBasedEngine {
 			
 			if(grows < maxGrows) {
 				grows++;
-				//System.out.printf("Growimg from the pool of %d elements %n", growingPool.size());
-				//mapGrow(is, property.toString(), mustChckList);
 				GrowByElimination(is, property.toString());
 			}
 			else {
@@ -648,12 +633,10 @@ public class AllIvcsExtractorEngine extends SolverBasedEngine {
 
 	//JB
 	private boolean bruteForceShrink(List<Symbol> seed, String property, Set<String> mustChckList) {
-		shrinks++;
-		//System.out.printf("shrinking, size: %d%n", seed.size() );			
+		shrinks++;		
 		List<Symbol> candidates = new ArrayList<Symbol>(seed);	
 		int original_size = seed.size();
-		for(Symbol c : candidates) {				
-			//System.out.printf("s %d ", round );			
+		for(Symbol c : candidates) {							
 			seed.remove(c);
 			if(mustElements.contains(c.toString()) ) { 
 				seed.add(c);				
@@ -948,10 +931,9 @@ public class AllIvcsExtractorEngine extends SolverBasedEngine {
 				//JB time computation
 				double time = (System.currentTimeMillis() - runtime) / 1000.0;
 				out.println("   <UcRuntime unit=\"sec\">" + time + "</UcRuntime>");
-				
-				//original
-				//out.println("   <UcRuntime unit=\"sec\">" + runtime + "</UcRuntime>");
-				
+				out.println("   <SatChecks>" + satChecks + "</SatChecks>");
+				out.println("   <UnsatChecks>" + unsatChecks + "</UnsatChecks>");
+				out.println("   <ID>" + mivcs + "</ID>");							
 				for (String s : untrimmed) {
 					out.println("   <IVC>" + s + "</IVC>");
 				}
@@ -973,7 +955,11 @@ public class AllIvcsExtractorEngine extends SolverBasedEngine {
 		private void writeToXmlAllIvcRuns(String res) {
 			String xmlFilename = settings.filename + "_alg" + settings.allIvcsAlgorithm + "_allivcs_inter_loop_runs.xml";  
 			try (PrintWriter out = new PrintWriter(new FileOutputStream(new File(xmlFilename), true))) { 
-				out.println("<Result>" + res + "</Result>");  
+				double time = (System.currentTimeMillis() - runtime) / 1000.0;
+				out.println("<Result>");
+				out.println("   <Runtime unit=\"sec\">" + time + "</Runtime>");
+				out.println("   <Validity>" + res + "</Validity>");
+				out.println("</Result>");  
 				out.flush(); 
 				out.close(); 
 			} catch (Throwable t) { 
