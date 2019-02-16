@@ -5,25 +5,30 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 
 import jkind.JKindException;
 import jkind.api.Backend;
 import jkind.api.results.JKindResult;
 import jkind.api.results.PropertyResult;
-import jkind.interval.IntEndpoint;
-import jkind.interval.Interval;
-import jkind.interval.NumericEndpoint;
-import jkind.interval.NumericInterval;
-import jkind.interval.RealEndpoint;
-import jkind.lustre.values.IntegerValue;
-import jkind.lustre.values.RealValue;
+import jkind.lustre.NamedType;
+import jkind.lustre.Type;
+import jkind.lustre.VarDecl;
 import jkind.lustre.values.Value;
 import jkind.results.Counterexample;
+import jkind.results.FunctionTable;
 import jkind.results.InconsistentProperty;
 import jkind.results.InvalidProperty;
 import jkind.results.Property;
@@ -31,12 +36,6 @@ import jkind.results.Signal;
 import jkind.results.UnknownProperty;
 import jkind.results.ValidProperty;
 import jkind.util.Util;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
 
 public class XmlParseThread extends Thread {
 	private final InputStream xmlStream;
@@ -63,7 +62,7 @@ public class XmlParseThread extends Thread {
 		 * the XML file which causes the buffer to fill. Instead, we read the
 		 * XML file ourselves and give relevant pieces of it to the parser as
 		 * they are ready.
-		 * 
+		 *
 		 * The downside is we assume the <Property ...> and </Property> tags are
 		 * on their own lines.
 		 */
@@ -181,14 +180,33 @@ public class XmlParseThread extends Thread {
 		int k = getK(getElement(propertyElement, "K"));
 		String answer = getAnswer(getElement(propertyElement, "Answer"));
 		String source = getSource(getElement(propertyElement, "Answer"));
+		int numOfIVCs = getNumOfIVCs(getElement(propertyElement, "NumberOfIVCs"));
 		List<String> invariants = getStringList(getElements(propertyElement, "Invariant"));
 		List<String> ivc = getStringList(getElements(propertyElement, "Ivc"));
+		Set<List<String>> invarantSets = new HashSet<List<String>>();
+		Set<List<String>> ivcSets = new HashSet<List<String>>();
 		List<String> conflicts = getConflicts(getElement(propertyElement, "Conflicts"));
 		Counterexample cex = getCounterexample(getElement(propertyElement, "Counterexample"), k);
 
+		if (numOfIVCs == 0) {
+			List<String> curInvariants = getStringList(getElements(propertyElement, "Invariant"));
+			List<String> curIvc = getStringList(getElements(propertyElement, "Ivc"));
+			invarantSets.add(curInvariants);
+			ivcSets.add(curIvc);
+		} else {
+			for (int i = 0; i < numOfIVCs; i++) {
+				Element ivcSetElem = (Element) propertyElement.getElementsByTagName("IvcSet").item(i);
+
+				List<String> curInvariants = getStringList(getElements(ivcSetElem, "Invariant"));
+				List<String> curIvc = getStringList(getElements(ivcSetElem, "Ivc"));
+				invarantSets.add(curInvariants);
+				ivcSets.add(curIvc);
+			}
+		}
+
 		switch (answer) {
 		case "valid":
-			return new ValidProperty(name, source, k, runtime, invariants, ivc);
+			return new ValidProperty(name, source, k, runtime, invariants, ivc, invarantSets, ivcSets);
 
 		case "falsifiable":
 			return new InvalidProperty(name, source, cex, conflicts, runtime);
@@ -234,6 +252,15 @@ public class XmlParseThread extends Thread {
 		}
 	}
 
+	private int getNumOfIVCs(Node numOfIVCNode) {
+		if (numOfIVCNode == null) {
+			return 0;
+		}
+		int num = Integer.parseInt(numOfIVCNode.getTextContent());
+		return num;
+
+	}
+
 	private String getAnswer(Node answerNode) {
 		return answerNode.getTextContent();
 	}
@@ -270,6 +297,9 @@ public class XmlParseThread extends Thread {
 		Counterexample cex = new Counterexample(k);
 		for (Element signalElement : getElements(cexElement, getSignalTag())) {
 			cex.addSignal(getSignal(signalElement));
+		}
+		for (Element functionElement : getElements(cexElement, "Function")) {
+			cex.addFunctionTable(getFunction(functionElement));
 		}
 		return cex;
 	}
@@ -312,11 +342,6 @@ public class XmlParseThread extends Thread {
 	}
 
 	private Value getValue(Element valueElement, String type) {
-		Element intervalElement = getElement(valueElement, "Interval");
-		if (intervalElement != null) {
-			return getIntervalValue(intervalElement, type);
-		}
-
 		if (type.startsWith("array of")) {
 			type = type.replaceAll("array of ", "");
 			return Util.parseArrayValue(type, getElement(valueElement, "Array"));
@@ -325,52 +350,32 @@ public class XmlParseThread extends Thread {
 		return Util.parseValue(type, valueElement.getTextContent());
 	}
 
-	private Interval getIntervalValue(Element intervalElement, String type) {
-		String low = intervalElement.getAttribute("low");
-		String high = intervalElement.getAttribute("high");
-		NumericEndpoint lowEnd;
-		NumericEndpoint highEnd;
+	private FunctionTable getFunction(Element functionElement) {
+		String name = functionElement.getAttribute("name");
+		List<VarDecl> inputs = new ArrayList<>();
+		for (Element inputElement : getElements(functionElement, "Input")) {
+			inputs.add(getVarDecl(inputElement));
+		}
+		VarDecl output = getVarDecl(getElement(functionElement, "Output"));
+		FunctionTable table = new FunctionTable(name, inputs, output);
 
-		switch (type) {
-		case "int":
-			lowEnd = readIntEndpoint(low);
-			highEnd = readIntEndpoint(high);
-			break;
-
-		case "real":
-			lowEnd = readRealEndpoint(low);
-			highEnd = readRealEndpoint(high);
-			break;
-
-		default:
-			throw new JKindException("Unknown interval type in XML file: " + type);
+		for (Element fvElement : getElements(functionElement, "FunctionValue")) {
+			List<Value> inputValues = new ArrayList<>();
+			List<Element> ivElements = getElements(fvElement, "InputValue");
+			for (int i = 0; i < inputs.size(); i++) {
+				inputValues.add(Util.parseValue(inputs.get(i).type, ivElements.get(i).getTextContent()));
+			}
+			Value outputValue = Util.parseValue(output.type, getElement(fvElement, "OutputValue").getTextContent());
+			table.addRow(inputValues, outputValue);
 		}
 
-		return new NumericInterval(lowEnd, highEnd);
+		return table;
 	}
 
-	private IntEndpoint readIntEndpoint(String text) {
-		switch (text) {
-		case "inf":
-			return IntEndpoint.POSITIVE_INFINITY;
-		case "-inf":
-			return IntEndpoint.NEGATIVE_INFINITY;
-		default:
-			IntegerValue iv = (IntegerValue) Util.parseValue("int", text);
-			return new IntEndpoint(iv.value);
-		}
-	}
-
-	private RealEndpoint readRealEndpoint(String text) {
-		switch (text) {
-		case "inf":
-			return RealEndpoint.POSITIVE_INFINITY;
-		case "-inf":
-			return RealEndpoint.NEGATIVE_INFINITY;
-		default:
-			RealValue rv = (RealValue) Util.parseValue("real", text);
-			return new RealEndpoint(rv.value);
-		}
+	private VarDecl getVarDecl(Element element) {
+		String name = element.getAttribute("name");
+		Type type = NamedType.get(element.getAttribute("type"));
+		return new VarDecl(name, type);
 	}
 
 	private Element getElement(Element element, String name) {

@@ -3,8 +3,6 @@ package jkind.solvers.z3;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import jkind.lustre.NamedType;
 import jkind.sexp.Cons;
 import jkind.sexp.Sexp;
 import jkind.sexp.Symbol;
@@ -12,9 +10,9 @@ import jkind.solvers.MaxSatSolver;
 import jkind.solvers.Result;
 import jkind.solvers.SatResult;
 import jkind.solvers.UnknownResult;
-import jkind.solvers.UnsatResult;
-import jkind.solvers.smtlib2.SmtLib2Solver;
-import jkind.util.SexpUtil; 
+import jkind.solvers.UnsatResult; 
+import jkind.solvers.smtlib2.SmtLib2Solver; 
+import jkind.solvers.smtlib2.SolverOutOfMemoryException;  
 
 public class Z3Solver extends SmtLib2Solver implements MaxSatSolver {
 	private final boolean linear;
@@ -66,22 +64,26 @@ public class Z3Solver extends SmtLib2Solver implements MaxSatSolver {
 			send(new Cons("check-sat"));
 		}
 
-		String status = readFromSolver();
-		if (isSat(status)) {
-			send("(get-model)");
-			result = new SatResult(parseModel(readFromSolver()));
-		} else if (isUnsat(status)) {
-			result = new UnsatResult();
-		} else {
-			// Even for unknown we can sometimes get a partial model
-			send("(get-model)");
-
-			String content = readFromSolver();
-			if (content == null) {
-				return new UnknownResult();
+		try {
+			String status = readFromSolver();
+			if (isSat(status)) {
+				send("(get-model)");
+				result = new SatResult(parseModel(readFromSolver()));
+			} else if (isUnsat(status)) {
+				result = new UnsatResult();
 			} else {
-				result = new UnknownResult(parseModel(content));
+				// Even for unknown we can sometimes get a partial model
+				send("(get-model)");
+
+				String content = readFromSolver();
+				if (content == null) {
+					return new UnknownResult();
+				} else {
+					result = new UnknownResult(parseModel(content));
+				}
 			}
+		} catch (SolverOutOfMemoryException e) {
+			return new UnknownResult();
 		}
 
 		if (!linear) {
@@ -119,6 +121,22 @@ public class Z3Solver extends SmtLib2Solver implements MaxSatSolver {
 			return new UnknownResult();
 		}
 	}
+
+	public Result checkMinimal() {
+		send("(set-option :sat.phase always_false)");
+		send("(check-sat-using sat)");
+		String status = readFromSolver(); 
+		
+		if (isSat(status)) {
+			send("(get-model)"); 
+			return new SatResult(parseModel(readFromSolver()));			
+		} else if (isUnsat(status)) { 			
+			return new UnsatResult();			
+		} else {
+			return new UnknownResult();
+		}
+	}
+	
 	
 	public Result checkValuation(List<Symbol> positiveLits, List<Symbol> negativeLits, boolean getModel) {
 		//send("(set-option :sat.phase always_true)");

@@ -1,15 +1,10 @@
-package jkind.engines.ivcs; 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.PrintWriter;
+package jkind.engines.ivcs;  
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
-
-import jkind.ExitCodes;
 import jkind.JKindException;
 import jkind.JKindSettings; 
 import jkind.engines.Director; 
@@ -22,7 +17,7 @@ import jkind.engines.messages.InvariantMessage;
 import jkind.engines.messages.Itinerary;
 import jkind.engines.messages.UnknownMessage;
 import jkind.engines.messages.ValidMessage; 
-import jkind.lustre.Expr;
+import jkind.lustre.Expr; 
 import jkind.lustre.NamedType;
 import jkind.lustre.VarDecl;
 import jkind.sexp.Cons;
@@ -35,18 +30,17 @@ import jkind.solvers.UnsatResult;
 import jkind.translation.Lustre2Sexp;
 import jkind.translation.Specification;
 import jkind.util.LinkedBiMap;
-import jkind.util.SexpUtil;
-import jkind.util.Util; 
+import jkind.util.SexpUtil; 
 
 public class IvcReductionEngine extends SolverBasedEngine {
 	public static final String NAME = "ivc-reduction";
 	private final LinkedBiMap<String, Symbol> ivcMap;
 	private double runtime;
-	
+
 	public IvcReductionEngine(Specification spec, JKindSettings settings, Director director) {
 		super(NAME, spec, settings, director);
-		ivcMap = Lustre2Sexp.createIvcMap(spec.node.ivc);  
-}
+		ivcMap = Lustre2Sexp.createIvcMap(spec.node.ivc);
+	}
 
 	@Override
 	protected void initializeSolver() {
@@ -56,6 +50,7 @@ public class IvcReductionEngine extends SolverBasedEngine {
 		for (Symbol e : ivcMap.values()) {
 			solver.define(new VarDecl(e.str, NamedType.BOOL));
 		}
+		solver.declare(spec.functions);
 		solver.define(spec.getIvcTransitionRelation());
 		solver.define(new VarDecl(INIT.str, NamedType.BOOL));
 	}
@@ -67,11 +62,8 @@ public class IvcReductionEngine extends SolverBasedEngine {
 
 	private void reduce(ValidMessage vm) {
 		for (String property : vm.valid) { 
-			if (properties.remove(property)) {
-				//----- for the experiments---------
-				runtime = System.currentTimeMillis(); 
-				//System.out.println("PROPERTY WAS PROVED... Start IVC reduction...");
-				//-----------------------------------
+			if (properties.remove(property)) { 
+				runtime = System.currentTimeMillis();   
 				reduceInvariants(IvcUtil.getInvariantByName(property, vm.invariants), vm);
 			}
 		}
@@ -93,11 +85,11 @@ public class IvcReductionEngine extends SolverBasedEngine {
 		createVariables(0);
 		assertInductiveTransition(0);
 
-		while (true) {
+		while (k <= vm.k) {
 			Sexp query = SexpUtil.conjoinInvariants(irreducible, k);
 			Result result = solver.unsatQuery(candidates.keyList(), query);
 
-			if (result instanceof SatResult) {
+			if (result instanceof SatResult || result instanceof UnknownResult) {
 				/*
 				 * We haven't yet found the minimal value of k, so assert the
 				 * irreducible and conditional invariants and increase k
@@ -130,9 +122,16 @@ public class IvcReductionEngine extends SolverBasedEngine {
 					irreducible.add(candidates.remove(core));
 					solver.assertSexp(core);
 				}
-			} else if (result instanceof UnknownResult) {
-				throw new JKindException("Unknown result in invariant reducer");
 			}
+		}
+
+		if (k == vm.k + 1) {
+			/*
+			 * Failed to find the right value of k, due to UnknownResult from
+			 * solver. Give up and use what we started with.
+			 */
+			irreducible.addAll(vm.invariants);
+			k = vm.k;
 		}
 
 		solver.pop();
@@ -160,7 +159,8 @@ public class IvcReductionEngine extends SolverBasedEngine {
 		}
 		List<Symbol> unsatCore = ((UnsatResult) result).getUnsatCore();
 		solver.pop();
-		sendValid(property.toString(), k, invariants, IvcUtil.getIvcNames(ivcMap, unsatCore), vm);
+
+		sendValid(property.toString(), k, invariants, getIvcNames(unsatCore), vm);
 	}
 
 	private Sexp getIvcQuery(List<Expr> properties, int k) {
@@ -224,15 +224,16 @@ public class IvcReductionEngine extends SolverBasedEngine {
 		return map;
 	}
 
-	private void sendValid(String valid, int k, List<Expr> invariants, Set<String> ivc,
-			ValidMessage vm) {
-		runtime = (System.currentTimeMillis() - runtime) / 1000.0; 
-		
-		//--------- for the experiments -------------- 
-		if(! settings.miniJkind){ 
-			writeToXml(ivc, vm.proofTime);  
+	private Set<String> getIvcNames(List<Symbol> symbols) {
+		Set<String> result = new HashSet<>();
+		for (Symbol s : symbols) {
+			result.add(ivcMap.inverse().get(s));
 		}
-		//-------------------------------------------- 
+		return result;
+	}
+
+	private void sendValid(String valid, int k, List<Expr> invariants, Set<String> ivc, ValidMessage vm) {
+		runtime = (System.currentTimeMillis() - runtime) / 1000.0; 
 		comment("Sending " + valid + " at k = " + k + " with invariants: ");
 		for (Expr invariant : invariants) {
 			comment(invariant.toString());
@@ -270,32 +271,5 @@ public class IvcReductionEngine extends SolverBasedEngine {
 		if (vm.getNextDestination() == EngineType.IVC_REDUCTION) {
 			reduce(vm);
 		}
-	}
-	
-	//---------- for the experiments --------------
-	private void writeToXml(Set<String> ivc, double proofTime) {
-		String xmlFilename = settings.filename + "_alg" + settings.allIvcsAlgorithm + "_uc.xml";  
-		try (PrintWriter out = new PrintWriter(new FileOutputStream(xmlFilename))) {
-			out.println("<?xml version=\"1.0\"?>");
-			out.println("<Results xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">");
-			out.println("   <UcRuntime unit=\"sec\">" + runtime + "</UcRuntime>");
-			double t = 30.0 + ((runtime + proofTime) * 5);
-			out.println("   <Timeout unit=\"sec\">" + t + "</Timeout>");
-			out.println("   <ProofTime unit=\"sec\">" + proofTime + "</ProofTime>");
-			out.println("   <Runtime unit=\"sec\">" + (runtime + proofTime) + "</Runtime>");
-			for (String s : Util.safeStringSortedSet(ivc)) {
-				out.println("   <IVC>" + s + "</IVC>");
-			}
-			for (String s : IvcUtil.trimNode(ivc)) {
-				out.println("   <TRIVC>" + s + "</TRIVC>");
-			}
-			out.println("</Results>");
-			out.flush(); 
-			out.close(); 
-		} catch (Throwable t) { 
-			t.printStackTrace();
-			System.exit(ExitCodes.UNCAUGHT_EXCEPTION);
-		}
-		
 	}
 }
